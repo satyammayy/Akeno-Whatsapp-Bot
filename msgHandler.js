@@ -9,7 +9,12 @@ const { RemoveBgError, RemoveBgResult, removeBackgroundFromImageBase64, removeBa
 const color = require('./lib/color')
 const { liriklagu, quotemaker, wall } = require('./lib/functions')
 const { help, newbot, info, nc, nsfwc, } = require('./lib/help')
-const msgFilter = require('./lib/msgFilter')
+const moment = require('moment-timezone')
+moment.tz.setDefault('Asia/Jakarta').locale('id')
+const { downloader } = require('../../lib')
+const { msgFilter, color, processTime, is } = require('./lib/msgFilter')
+const { uploadImages } = require('../../utils/fetcher')
+const { menuId, menuEn } = require('./text') 
 const akaneko = require('akaneko');
 const { exec } = require('child_process')
 const fetch = require('node-fetch');
@@ -53,8 +58,8 @@ module.exports = msgHandler = async (client, message) => {
     try {
         const { type, id, from, t, sender, isGroupMsg, chat, chatId, caption, isMedia, mimetype, quotedMsg, mentionedJidList, author, quotedMsgObj } = message
         let { body } = message
-        const { name } = chat
-        let { pushname, verifiedName } = sender
+        const { name, formattedTitle } = chat
+        let { pushname, verifiedName, formattedName } = sender
         body = (type === 'chat' && body.startsWith(prefix)) ? body : ((type === 'image' && caption || type === 'video' && caption) && caption.startsWith(prefix)) ? caption : ''
         const command = body.slice(prefix.length).trim().split(/ +/).shift().toLowerCase()
         const args = body.slice(prefix.length).trim().split(/ +/).slice(1)
@@ -211,6 +216,39 @@ module.exports = msgHandler = async (client, message) => {
                         console.error(err)
                         await client.reply(from, 'Sorry Senpai, something went wrong!!', id)
                     })
+            break
+		 case 'ig':
+        case 'instagram':
+            if (args.length !== 1) return client.reply(from, 'Maaf, format pesan salah silahkan periksa menu. [Wrong Format]', id)
+            if (!is.Url(url) && !url.includes('instagram.com')) return client.reply(from, 'Maaf, link yang kamu kirim tidak valid. [Invalid Link]', id)
+            await client.reply(from, `_Scraping Metadata..._ \n\n${menuId.textDonasi()}`, id)
+            downloader.insta(url).then(async (data) => {
+                if (data.type == 'GraphSidecar') {
+                    if (data.image.length != 0) {
+                        data.image.map((x) => client.sendFileFromUrl(from, x, 'photo.jpg', '', null, null, true))
+                            .then((serialized) => console.log(`Sukses Mengirim File dengan id: ${serialized} diproses selama ${processTime(t, moment())}`))
+                            .catch((err) => console.error(err))
+                    }
+                    if (data.video.length != 0) {
+                        data.video.map((x) => client.sendFileFromUrl(from, x.videoUrl, 'video.jpg', '', null, null, true))
+                            .then((serialized) => console.log(`Sukses Mengirim File dengan id: ${serialized} diproses selama ${processTime(t, moment())}`))
+                            .catch((err) => console.error(err))
+                    }
+                } else if (data.type == 'GraphImage') {
+                    client.sendFileFromUrl(from, data.image, 'photo.jpg', '', null, null, true)
+                        .then((serialized) => console.log(`Sukses Mengirim File dengan id: ${serialized} diproses selama ${processTime(t, moment())}`))
+                        .catch((err) => console.error(err))
+                } else if (data.type == 'GraphVideo') {
+                    client.sendFileFromUrl(from, data.video.videoUrl, 'video.mp4', '', null, null, true)
+                        .then((serialized) => console.log(`Sukses Mengirim File dengan id: ${serialized} diproses selama ${processTime(t, moment())}`))
+                        .catch((err) => console.error(err))
+                }
+            })
+                .catch((err) => {
+                    console.log(err)
+                    if (err === 'Not a video') { return client.reply(from, 'Error, tidak ada video di link yang kamu kirim. [Invalid Link]', id) }
+                    client.reply(from, 'Error, user private atau link salah [Private or Invalid Link]', id)
+                })
             break
 			
 		case 'nightcore':
