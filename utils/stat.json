@@ -1,0 +1,13 @@
+{
+	"sent": {
+		"chat": 32,
+		"video": 1,
+		"e2e_notification": 1,
+		"image": 5
+	},
+	"receive": {
+		"chat": 44,
+		"sticker": 7,
+		"image": 1
+	}
+}
